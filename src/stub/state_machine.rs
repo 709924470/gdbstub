@@ -159,7 +159,11 @@ where
                 s2.strip_prefix(state::MODULE_PATH).unwrap_or(s2)
             );
         }
-        GdbStubStateMachineInner { i: self.i, state }
+        GdbStubStateMachineInner {
+            i: self.i,
+            state,
+            _state: None,
+        }
     }
 }
 
@@ -179,6 +183,7 @@ struct GdbStubStateMachineReallyInner<'a, T: Target, C: Connection> {
 pub struct GdbStubStateMachineInner<'a, S, T: Target, C: Connection> {
     i: GdbStubStateMachineReallyInner<'a, T, C>,
     state: S,
+    _state: Option<State>,
 }
 
 /// Methods which can be called regardless of the current state.
@@ -206,6 +211,7 @@ impl<'a, T: Target, C: Connection> GdbStubStateMachineInner<'a, state::Idle<T>, 
             state: state::Idle {
                 deferred_ctrlc_stop_reason: None,
             },
+            _state: None,
         }
     }
 
@@ -221,10 +227,14 @@ impl<'a, T: Target, C: Connection> GdbStubStateMachineInner<'a, state::Idle<T>, 
         };
 
         let packet = Packet::from_buf(target, packet_buffer).map_err(InternalError::PacketParse)?;
-        let state = self
-            .i
-            .inner
-            .handle_packet(target, &mut self.i.conn, packet)?;
+        let state = match packet {
+            Packet::Nack => self._state.unwrap(),
+            _ => self
+                .i
+                .inner
+                .handle_packet(target, &mut self.i.conn, packet)?,
+        };
+        self._state = Some(state);
         Ok(match state {
             State::Pump => self.into(),
             State::Disconnect(reason) => self.transition(state::Disconnected { reason }).into(),
@@ -285,10 +295,14 @@ impl<'a, T: Target, C: Connection> GdbStubStateMachineInner<'a, state::Running, 
         };
 
         let packet = Packet::from_buf(target, packet_buffer).map_err(InternalError::PacketParse)?;
-        let state = self
-            .i
-            .inner
-            .handle_packet(target, &mut self.i.conn, packet)?;
+        let state = match packet {
+            Packet::Nack => self._state.unwrap(),
+            _ => self
+                .i
+                .inner
+                .handle_packet(target, &mut self.i.conn, packet)?,
+        };
+        self._state = Some(state);
         Ok(match state {
             State::Pump => self.transition(state::Running {}).into(),
             State::Disconnect(reason) => self.transition(state::Disconnected { reason }).into(),
