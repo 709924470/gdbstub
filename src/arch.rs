@@ -17,8 +17,11 @@
 
 use crate::internal::BeBytes;
 use crate::internal::LeBytes;
+
 use core::fmt::Debug;
 use core::num::NonZeroUsize;
+
+use num_traits::Bounded;
 use num_traits::FromPrimitive;
 use num_traits::PrimInt;
 use num_traits::Unsigned;
@@ -121,7 +124,7 @@ impl BreakpointKind for usize {
 /// explicitly instantiated.
 pub trait Arch {
     /// The architecture's pointer size (e.g: `u32` on a 32-bit system).
-    type Usize: Debug + FromPrimitive + PrimInt + Unsigned + BeBytes + LeBytes;
+    type Usize: Debug + FromPrimitive + PrimInt + Unsigned + BeBytes + LeBytes + Bounded;
 
     /// The architecture's register file. See [`Registers`] for more details.
     type Registers: Registers<ProgramCounter = Self::Usize>;
