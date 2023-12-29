@@ -89,6 +89,7 @@ pub enum DisconnectReason {
     Kill,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum State {
     Pump,
     DeferredStopReason,
